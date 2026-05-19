@@ -1,0 +1,52 @@
+name: CI - Retraining Model
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  retraining:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy scikit-learn imbalanced-learn xgboost mlflow dagshub
+
+      - name: Run retraining
+        env:
+          DAGSHUB_USER_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          cd MLProject
+          python modelling.py \
+            --n_estimators 200 \
+            --max_depth 5 \
+            --learning_rate 0.1
+
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgboost-model
+          path: MLProject/mlruns/
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./MLProject
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-xgboost:latest
