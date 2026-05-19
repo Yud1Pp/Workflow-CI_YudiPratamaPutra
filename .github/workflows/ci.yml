@@ -3,7 +3,7 @@ name: CI - Retraining Model
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   retraining:
