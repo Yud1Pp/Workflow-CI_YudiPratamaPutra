@@ -13,11 +13,13 @@ parser.add_argument('--max_depth',     type=int,   default=5)
 parser.add_argument('--learning_rate', type=float, default=0.1)
 args = parser.parse_args()
 
-TRACKING_URI = os.environ.get(
+mlflow.set_tracking_uri(os.environ.get(
     'MLFLOW_TRACKING_URI',
     'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
-)
-mlflow.set_tracking_uri(TRACKING_URI)
+))
+
+# Set experiment baru — ini yang bikin artifact storage aktif di DagsHub
+mlflow.set_experiment('telco-churn-xgboost-ci')
 
 X_train = pd.read_csv('telco_preprocessing/X_train.csv')
 X_test  = pd.read_csv('telco_preprocessing/X_test.csv')
@@ -54,8 +56,7 @@ with mlflow.start_run() as run:
 
     mlflow.xgboost.log_model(
         model,
-        artifact_path='xgboost-ci-model',
-        registered_model_name=None  # register di step terpisah
+        artifact_path='xgboost-ci-model'
     )
 
     run_id = run.info.run_id
