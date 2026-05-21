@@ -56,11 +56,9 @@ jobs:
           python -c "
           import mlflow, os
           client = mlflow.tracking.MlflowClient()
-          # Cari semua experiment dulu
           experiments = client.search_experiments()
           for exp in experiments:
               print(f'Experiment: {exp.name} | ID: {exp.experiment_id}')
-          # Ambil run terbaru dari semua experiment
           runs = client.search_runs(
               experiment_ids=[exp.experiment_id for exp in experiments],
               order_by=['start_time DESC'],
@@ -72,6 +70,26 @@ jobs:
               f.write(run_id)
           "
           echo "RUN_ID=$(cat run_id.txt)" >> $GITHUB_ENV
+
+      # ✅ STEP BARU
+      - name: Register model to MLflow Registry
+        env:
+          MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
+          MLFLOW_TRACKING_USERNAME: Yud1Pp
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          python -c "
+          import mlflow
+
+          run_id = '${{ env.RUN_ID }}'
+          print(f'Registering run: {run_id}')
+
+          result = mlflow.register_model(
+              model_uri=f'runs:/{run_id}/xgboost-ci-model',
+              name='telco-churn-xgboost'
+          )
+          print(f'Registered: version={result.version}, status={result.status}')
+          "
 
       - name: Install Python dependencies for upload
         run: |
