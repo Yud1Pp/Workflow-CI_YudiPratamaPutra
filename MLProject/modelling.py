@@ -1,8 +1,8 @@
 import pandas as pd
 import mlflow
 import mlflow.xgboost
-import dagshub
 import argparse
+import os
 from xgboost import XGBClassifier
 from sklearn.metrics import (accuracy_score, precision_score,
                              recall_score, f1_score)
@@ -14,12 +14,12 @@ parser.add_argument('--max_depth',     type=int,   default=5)
 parser.add_argument('--learning_rate', type=float, default=0.1)
 args = parser.parse_args()
 
-# ── Setup DagsHub & MLflow ────────────────────────────────────────
-dagshub.init(
-    repo_owner='Yud1Pp',
-    repo_name='Membangun_Model_YudiPratamaPutra',
-    mlflow=True
-)
+# ── Setup MLflow langsung dari env variable ───────────────────────
+# Tidak pakai dagshub.init() agar tidak minta login interaktif di CI
+mlflow.set_tracking_uri(os.environ.get(
+    'MLFLOW_TRACKING_URI',
+    'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
+))
 
 mlflow.set_experiment('telco-churn-ci')
 
@@ -59,9 +59,9 @@ with mlflow.start_run(run_name='ci-run') as run:
     mlflow.log_metric('recall',    rec)
     mlflow.log_metric('f1_score',  f1)
 
-    mlflow.xgboost.log_model(model, name='xgboost-ci-model')
+    mlflow.xgboost.log_model(model, artifact_path='xgboost-ci-model')
 
-    # Simpan run_id ke file untuk dipakai step berikutnya
+    # Simpan run_id ke file
     with open('run_id.txt', 'w') as f:
         f.write(run.info.run_id)
 
