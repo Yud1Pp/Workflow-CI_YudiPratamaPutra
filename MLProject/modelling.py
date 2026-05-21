@@ -2,7 +2,7 @@ import pandas as pd
 import mlflow
 import mlflow.xgboost
 import argparse
-import os
+import dagshub
 from xgboost import XGBClassifier
 from sklearn.metrics import (accuracy_score, precision_score,
                              recall_score, f1_score)
@@ -13,13 +13,12 @@ parser.add_argument('--max_depth',     type=int,   default=5)
 parser.add_argument('--learning_rate', type=float, default=0.1)
 args = parser.parse_args()
 
-mlflow.set_tracking_uri(os.environ.get(
-    'MLFLOW_TRACKING_URI',
-    'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
-))
-
-# Set experiment baru — ini yang bikin artifact storage aktif di DagsHub
-mlflow.set_experiment('telco-churn-xgboost-ci')
+# Init DagsHub — otomatis setup tracking URI + artifact storage
+dagshub.init(
+    repo_owner='Yud1Pp',
+    repo_name='Membangun_Model_YudiPratamaPutra',
+    mlflow=True
+)
 
 X_train = pd.read_csv('telco_preprocessing/X_train.csv')
 X_test  = pd.read_csv('telco_preprocessing/X_test.csv')
@@ -54,9 +53,11 @@ with mlflow.start_run() as run:
     mlflow.log_metric('recall',    rec)
     mlflow.log_metric('f1_score',  f1)
 
+    # Log model + register sekaligus
     mlflow.xgboost.log_model(
-        model,
-        artifact_path='xgboost-ci-model'
+        xgb_model=model,
+        artifact_path='model',
+        registered_model_name='telco-churn-xgboost'
     )
 
     run_id = run.info.run_id

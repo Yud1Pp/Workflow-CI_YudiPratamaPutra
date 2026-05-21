@@ -22,8 +22,6 @@ jobs:
         run: |
           python --version
           pip --version
-          echo "MLFLOW_TRACKING_URI=$MLFLOW_TRACKING_URI"
-          echo "MLFLOW_TRACKING_USERNAME=$MLFLOW_TRACKING_USERNAME"
         env:
           MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
           MLFLOW_TRACKING_USERNAME: Yud1Pp
@@ -38,7 +36,7 @@ jobs:
           MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
           MLFLOW_TRACKING_USERNAME: Yud1Pp
           MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
-          MLFLOW_ARTIFACT_UPLOAD_DOWNLOAD_TIMEOUT: "600"
+          DAGSHUB_USER_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           cd MLProject
           mlflow run . \
@@ -52,41 +50,6 @@ jobs:
           RUN_ID=$(cat MLProject/run_id.txt)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Run ID: $RUN_ID"
-
-      - name: Verify artifact exists on DagsHub
-        env:
-          MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
-          MLFLOW_TRACKING_USERNAME: Yud1Pp
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
-        run: |
-          python -c "
-          import mlflow
-          client = mlflow.tracking.MlflowClient()
-          run_id = '${{ env.RUN_ID }}'
-          artifacts = client.list_artifacts(run_id)
-          print('Artifacts found:')
-          for a in artifacts:
-              print(f'  - {a.path} (is_dir={a.is_dir})')
-          if not artifacts:
-              raise Exception('No artifacts found! Model was not logged to DagsHub.')
-          "
-
-      - name: Register model to MLflow Registry
-        env:
-          MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
-          MLFLOW_TRACKING_USERNAME: Yud1Pp
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
-        run: |
-          python -c "
-          import mlflow
-          run_id = '${{ env.RUN_ID }}'
-          print(f'Registering run: {run_id}')
-          result = mlflow.register_model(
-              model_uri=f'runs:/{run_id}/xgboost-ci-model',
-              name='telco-churn-xgboost'
-          )
-          print(f'Registered: version={result.version}, status={result.status}')
-          "
 
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
