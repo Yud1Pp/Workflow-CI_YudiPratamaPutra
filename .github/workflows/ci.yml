@@ -56,7 +56,16 @@ jobs:
           python -c "
           import mlflow, os
           client = mlflow.tracking.MlflowClient()
-          runs = client.search_runs('2', order_by=['start_time DESC'], max_results=1)
+          # Cari semua experiment dulu
+          experiments = client.search_experiments()
+          for exp in experiments:
+              print(f'Experiment: {exp.name} | ID: {exp.experiment_id}')
+          # Ambil run terbaru dari semua experiment
+          runs = client.search_runs(
+              experiment_ids=[exp.experiment_id for exp in experiments],
+              order_by=['start_time DESC'],
+              max_results=1
+          )
           run_id = runs[0].info.run_id
           print(f'Latest Run ID: {run_id}')
           with open('run_id.txt', 'w') as f:
