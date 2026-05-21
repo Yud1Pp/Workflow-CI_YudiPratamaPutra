@@ -32,7 +32,7 @@ y_test  = pd.read_csv('telco_preprocessing/y_test.csv').squeeze()
 print(f"[INFO] X_train: {X_train.shape} | X_test: {X_test.shape}")
 
 # ── Training & Manual Logging ─────────────────────────────────────
-with mlflow.start_run(run_name='ci-run'):
+with mlflow.start_run(run_name='ci-run') as run:
 
     model = XGBClassifier(
         n_estimators=args.n_estimators,
@@ -61,6 +61,11 @@ with mlflow.start_run(run_name='ci-run'):
 
     mlflow.xgboost.log_model(model, name='xgboost-ci-model')
 
+    # Simpan run_id ke file untuk dipakai step berikutnya
+    with open('run_id.txt', 'w') as f:
+        f.write(run.info.run_id)
+
+    print(f"[INFO] Run ID: {run.info.run_id}")
     print(f"[RESULT] Accuracy : {acc:.4f}")
     print(f"[RESULT] Precision: {prec:.4f}")
     print(f"[RESULT] Recall   : {rec:.4f}")
