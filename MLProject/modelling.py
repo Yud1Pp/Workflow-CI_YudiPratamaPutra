@@ -14,8 +14,7 @@ parser.add_argument('--max_depth',     type=int,   default=5)
 parser.add_argument('--learning_rate', type=float, default=0.1)
 args = parser.parse_args()
 
-# ── Setup MLflow langsung dari env variable ───────────────────────
-# Tidak pakai dagshub.init() agar tidak minta login interaktif di CI
+# ── Setup MLflow ──────────────────────────────────────────────────
 mlflow.set_tracking_uri(os.environ.get(
     'MLFLOW_TRACKING_URI',
     'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
@@ -31,44 +30,43 @@ y_test  = pd.read_csv('telco_preprocessing/y_test.csv').squeeze()
 
 print(f"[INFO] X_train: {X_train.shape} | X_test: {X_test.shape}")
 
-# ── Training & Manual Logging ─────────────────────────────────────
-with mlflow.start_run(run_name='ci-run') as run:
+# ── Training & Logging ────────────────────────────────────────────
+# Tidak pakai mlflow.start_run() karena sudah di-handle oleh mlflow run .
+model = XGBClassifier(
+    n_estimators=args.n_estimators,
+    max_depth=args.max_depth,
+    learning_rate=args.learning_rate,
+    random_state=42,
+    eval_metric='logloss'
+)
 
-    model = XGBClassifier(
-        n_estimators=args.n_estimators,
-        max_depth=args.max_depth,
-        learning_rate=args.learning_rate,
-        random_state=42,
-        eval_metric='logloss'
-    )
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
 
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+acc  = accuracy_score(y_test, y_pred)
+prec = precision_score(y_test, y_pred)
+rec  = recall_score(y_test, y_pred)
+f1   = f1_score(y_test, y_pred)
 
-    acc  = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred)
-    rec  = recall_score(y_test, y_pred)
-    f1   = f1_score(y_test, y_pred)
+mlflow.log_param('n_estimators',  args.n_estimators)
+mlflow.log_param('max_depth',     args.max_depth)
+mlflow.log_param('learning_rate', args.learning_rate)
 
-    mlflow.log_param('n_estimators',  args.n_estimators)
-    mlflow.log_param('max_depth',     args.max_depth)
-    mlflow.log_param('learning_rate', args.learning_rate)
+mlflow.log_metric('accuracy',  acc)
+mlflow.log_metric('precision', prec)
+mlflow.log_metric('recall',    rec)
+mlflow.log_metric('f1_score',  f1)
 
-    mlflow.log_metric('accuracy',  acc)
-    mlflow.log_metric('precision', prec)
-    mlflow.log_metric('recall',    rec)
-    mlflow.log_metric('f1_score',  f1)
+mlflow.xgboost.log_model(model, artifact_path='xgboost-ci-model')
 
-    mlflow.xgboost.log_model(model, artifact_path='xgboost-ci-model')
+# Simpan run_id ke file
+run_id = mlflow.active_run().info.run_id
+with open('run_id.txt', 'w') as f:
+    f.write(run_id)
 
-    # Simpan run_id ke file
-    with open('run_id.txt', 'w') as f:
-        f.write(run.info.run_id)
-
-    print(f"[INFO] Run ID: {run.info.run_id}")
-    print(f"[RESULT] Accuracy : {acc:.4f}")
-    print(f"[RESULT] Precision: {prec:.4f}")
-    print(f"[RESULT] Recall   : {rec:.4f}")
-    print(f"[RESULT] F1 Score : {f1:.4f}")
-
+print(f"[INFO] Run ID: {run_id}")
+print(f"[RESULT] Accuracy : {acc:.4f}")
+print(f"[RESULT] Precision: {prec:.4f}")
+print(f"[RESULT] Recall   : {rec:.4f}")
+print(f"[RESULT] F1 Score : {f1:.4f}")
 print("✅ CI modelling selesai!")
