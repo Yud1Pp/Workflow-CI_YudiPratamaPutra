@@ -7,22 +7,18 @@ from xgboost import XGBClassifier
 from sklearn.metrics import (accuracy_score, precision_score,
                              recall_score, f1_score)
 
-# ── Argparse ──────────────────────────────────────────────────────
 parser = argparse.ArgumentParser()
 parser.add_argument('--n_estimators',  type=int,   default=200)
 parser.add_argument('--max_depth',     type=int,   default=5)
 parser.add_argument('--learning_rate', type=float, default=0.1)
 args = parser.parse_args()
 
-# ── Setup MLflow ──────────────────────────────────────────────────
-mlflow.set_tracking_uri(os.environ.get(
+TRACKING_URI = os.environ.get(
     'MLFLOW_TRACKING_URI',
     'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
-))
+)
+mlflow.set_tracking_uri(TRACKING_URI)
 
-# HAPUS mlflow.set_experiment() — sudah di-handle mlflow run .
-
-# ── Load data ─────────────────────────────────────────────────────
 X_train = pd.read_csv('telco_preprocessing/X_train.csv')
 X_test  = pd.read_csv('telco_preprocessing/X_test.csv')
 y_train = pd.read_csv('telco_preprocessing/y_train.csv').squeeze()
@@ -30,42 +26,45 @@ y_test  = pd.read_csv('telco_preprocessing/y_test.csv').squeeze()
 
 print(f"[INFO] X_train: {X_train.shape} | X_test: {X_test.shape}")
 
-# ── Training & Logging ────────────────────────────────────────────
-model = XGBClassifier(
-    n_estimators=args.n_estimators,
-    max_depth=args.max_depth,
-    learning_rate=args.learning_rate,
-    random_state=42,
-    eval_metric='logloss'
-)
+with mlflow.start_run() as run:
+    model = XGBClassifier(
+        n_estimators=args.n_estimators,
+        max_depth=args.max_depth,
+        learning_rate=args.learning_rate,
+        random_state=42,
+        eval_metric='logloss'
+    )
 
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-acc  = accuracy_score(y_test, y_pred)
-prec = precision_score(y_test, y_pred)
-rec  = recall_score(y_test, y_pred)
-f1   = f1_score(y_test, y_pred)
+    acc  = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    rec  = recall_score(y_test, y_pred)
+    f1   = f1_score(y_test, y_pred)
 
-mlflow.log_param('n_estimators',  args.n_estimators)
-mlflow.log_param('max_depth',     args.max_depth)
-mlflow.log_param('learning_rate', args.learning_rate)
+    mlflow.log_param('n_estimators',  args.n_estimators)
+    mlflow.log_param('max_depth',     args.max_depth)
+    mlflow.log_param('learning_rate', args.learning_rate)
 
-mlflow.log_metric('accuracy',  acc)
-mlflow.log_metric('precision', prec)
-mlflow.log_metric('recall',    rec)
-mlflow.log_metric('f1_score',  f1)
+    mlflow.log_metric('accuracy',  acc)
+    mlflow.log_metric('precision', prec)
+    mlflow.log_metric('recall',    rec)
+    mlflow.log_metric('f1_score',  f1)
 
-mlflow.xgboost.log_model(model, artifact_path='xgboost-ci-model')
+    mlflow.xgboost.log_model(
+        model,
+        artifact_path='xgboost-ci-model',
+        registered_model_name=None  # register di step terpisah
+    )
 
-# Simpan run_id
-run_id = mlflow.active_run().info.run_id
-with open('run_id.txt', 'w') as f:
-    f.write(run_id)
+    run_id = run.info.run_id
+    with open('run_id.txt', 'w') as f:
+        f.write(run_id)
 
-print(f"[INFO] Run ID: {run_id}")
-print(f"[RESULT] Accuracy : {acc:.4f}")
-print(f"[RESULT] Precision: {prec:.4f}")
-print(f"[RESULT] Recall   : {rec:.4f}")
-print(f"[RESULT] F1 Score : {f1:.4f}")
-print("✅ CI modelling selesai!")
+    print(f"[INFO] Run ID: {run_id}")
+    print(f"[RESULT] Accuracy : {acc:.4f}")
+    print(f"[RESULT] Precision: {prec:.4f}")
+    print(f"[RESULT] Recall   : {rec:.4f}")
+    print(f"[RESULT] F1 Score : {f1:.4f}")
+    print("✅ CI modelling selesai!")
