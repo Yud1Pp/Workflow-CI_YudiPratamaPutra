@@ -24,6 +24,8 @@ jobs:
 
       - name: Run retraining
         env:
+          MLFLOW_TRACKING_URI: https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow
+          MLFLOW_TRACKING_USERNAME: Yud1Pp
           DAGSHUB_USER_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           cd MLProject
