@@ -20,7 +20,7 @@ mlflow.set_tracking_uri(os.environ.get(
     'https://dagshub.com/Yud1Pp/Membangun_Model_YudiPratamaPutra.mlflow'
 ))
 
-mlflow.set_experiment('telco-churn-ci')
+# HAPUS mlflow.set_experiment() — sudah di-handle mlflow run .
 
 # ── Load data ─────────────────────────────────────────────────────
 X_train = pd.read_csv('telco_preprocessing/X_train.csv')
@@ -31,7 +31,6 @@ y_test  = pd.read_csv('telco_preprocessing/y_test.csv').squeeze()
 print(f"[INFO] X_train: {X_train.shape} | X_test: {X_test.shape}")
 
 # ── Training & Logging ────────────────────────────────────────────
-# Tidak pakai mlflow.start_run() karena sudah di-handle oleh mlflow run .
 model = XGBClassifier(
     n_estimators=args.n_estimators,
     max_depth=args.max_depth,
@@ -59,7 +58,7 @@ mlflow.log_metric('f1_score',  f1)
 
 mlflow.xgboost.log_model(model, artifact_path='xgboost-ci-model')
 
-# Simpan run_id ke file
+# Simpan run_id
 run_id = mlflow.active_run().info.run_id
 with open('run_id.txt', 'w') as f:
     f.write(run_id)
